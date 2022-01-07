@@ -1,5 +1,5 @@
 [package]
-name = "btree-map"
+name = "hash-set"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -8,4 +8,3 @@ description = "A data structure for storing and manipulating fixed number of ele
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-stack-array = { path = "../stack-array", version = "0.1.0" }
