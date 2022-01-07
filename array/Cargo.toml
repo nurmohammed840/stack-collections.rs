@@ -1,7 +1,9 @@
 [package]
-name = "array"
+name = "stack-array"
 version = "0.1.0"
 edition = "2021"
+discription = "A data structure for storing and manipulating fixed number of elements of a specific type."
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
