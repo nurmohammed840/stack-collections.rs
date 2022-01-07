@@ -18,44 +18,144 @@ pub struct Array<T, const N: usize> {
 }
 
 impl<T, const N: usize> Array<T, N> {
+    /// Creates a new [`Array<T, N>`].
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use stack_array::Array;
+    /// 
+    /// let array: Array<u8, 4> = Array::new();
+    /// // or
+    /// let array = Array::<u8, 4>::new();
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
 
+    
+    /// Returns the number of elements the array can hold.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let array: Array<u8, 4> = Array::new();
+    /// assert_eq!(array.capacity(), 4);
+    /// ```
     pub fn capacity(&self) -> usize {
         N
     }
 
+    /// Returns the number of elements currently in the array.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use stack_array::Array;
+    ///     
+    /// let mut array: Array<u8, 3> = Array::from([1, 2]);
+    /// assert_eq!(array.len(), 2);
+    /// ```
     pub fn len(&self) -> usize {
         self.len
     }
 
-    pub fn remaining(&self) -> usize {
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut array: Array<u8, 3> = Array::from([1, 2]);
+    /// assert!(!array.is_full());
+    /// ```
+    pub fn is_full(&self) -> bool {
+        self.len >= N
+    }
+
+    /// Returns the number of elements can be inserted into the array.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut array: Array<u8, 3> = Array::from([1, 2]);
+    /// assert_eq!(array.remaing(), 1);
+    /// ```
+    pub fn remaing(&self) -> usize {
         N - self.len
     }
 
+
+    /// Appends an element to the back of a collection
+    /// 
+    /// ### Examples
+    /// 
+    /// ```rust
+    /// use stack_array::Array;
+    ///
+    /// let mut list: Array<u8, 3> = Array::from([1]);
+    /// list.push(2);
+    /// list.push(3);
+    /// assert_eq!(&list[..], [1, 2, 3]);
+    /// ```
     pub fn push(&mut self, val: T) {
         self.data[self.len] = MaybeUninit::new(val);
         self.len += 1;
     }
 
+    /// Removes the last element from a collection and returns it.
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// use stack_array::Array;
+    /// 
+    /// let mut list: Array<u8, 3> = Array::from([1, 2]);
+    /// assert_eq!(list.pop(), 2);
+    /// assert_eq!(list.pop(), 1);
+    /// assert_eq!(list.len(), 0);
+    /// ```
     pub fn pop(&mut self) -> T {
         self.len -= 1;
         unsafe { take(&mut self.data[self.len]) }
     }
 
-    pub fn is_full(&self) -> bool {
-        self.len >= N
-    }
-
+    /// Clears the array, removing all values.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
+    /// list.clear();
+    /// assert!(list.is_empty());
+    /// ```
     pub fn clear(&mut self) {
-        // SAFETY: mutable slice will contain only initialized objects, So It's safe to drop them.
-        unsafe {
-            ptr::drop_in_place(self.as_mut());
+        // SAFETY: slice will contain only initialized objects, So It's safe to drop them.
+        for slot in &mut self.data[0..self.len] {
+            unsafe {
+                ptr::drop_in_place(slot.as_mut_ptr());
+            }
         }
         self.len = 0;
     }
 
+    /// Inserts an element at position index within the array, shifting all elements after it to the right.
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut list: Array<u8, 3> = Array::from([3]);
+    /// list.insert(0, 1);
+    /// assert_eq!(&list[..], [1, 3]);
+    /// list.insert(1, 2);
+    /// assert_eq!(&list[..], [1, 2, 3]);
+    /// ```
     pub fn insert(&mut self, index: usize, val: T) {
         assert!(index <= self.len);
         for i in (index..self.len).rev() {
@@ -65,6 +165,18 @@ impl<T, const N: usize> Array<T, N> {
         self.len += 1;
     }
 
+    /// Removes an element from position index within the array, shifting all elements after it to the left.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
+    /// assert_eq!(list.remove(0), 1);
+    /// assert_eq!(list.remove(0), 2);
+    /// assert_eq!(list.remove(0), 3);
+    /// ```
     pub fn remove(&mut self, index: usize) -> T {
         assert!(index < self.len);
         let value = unsafe { take(&mut self.data[index]) };
@@ -147,54 +259,5 @@ impl<T, const N: usize, const S: usize> From<[T; S]> for Array<T, N> {
             array.push(val);
         }
         array
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn push() {
-        let mut list: Array<u8, 3> = Array::from([1]);
-        list.push(2);
-        list.push(3);
-        assert_eq!(&list[..], [1, 2, 3]);
-    }
-
-    #[test]
-    fn pop() {
-        let mut list: Array<u8, 3> = Array::from([1, 2]);
-        assert_eq!(list.pop(), 2);
-        assert_eq!(list.pop(), 1);
-        assert_eq!(list.len(), 0);
-    }
-
-    #[test]
-    fn remove() {
-        let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
-        assert_eq!(list.remove(0), 1);
-        assert_eq!(list.remove(0), 2);
-        assert_eq!(list.remove(0), 3);
-    }
-
-    #[test]
-    fn insert() {
-        let mut list: Array<u8, 3> = Array::from([3]);
-        list.insert(0, 1);
-        assert_eq!(&list[..], [1, 3]);
-        list.insert(1, 2);
-        assert_eq!(&list[..], [1, 2, 3]);
-    }
-
-    #[test]
-    fn list_from_buf() {
-        assert_eq!(Array::<u8, 3>::new().len(), 0);
-        assert_eq!(Array::<u8, 3>::from([1, 2]).len(), 2);
-    }
-
-    #[test]
-    fn list_from_slice() {
-        assert_eq!(Array::<u8, 3>::new().len(), 0);
-        assert_eq!(Array::<u8, 3>::from([1, 2].as_ref()).len(), 2);
     }
 }
