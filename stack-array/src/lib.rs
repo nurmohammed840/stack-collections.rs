@@ -12,6 +12,7 @@ use core::{
 };
 
 /// Caller must ensure that `value` is properly initialized.
+#[inline(always)]
 unsafe fn take<T>(dest: &mut MaybeUninit<T>) -> T {
     replace(dest, MaybeUninit::uninit()).assume_init()
 }
@@ -35,7 +36,7 @@ impl<T, const N: usize> Array<T, N> {
     /// let arr: Array<u8, 4> = Array::new();
     /// ```
     #[inline(always)]
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             len: 0,
             // SAFETY: An uninitialized `[MaybeUninit<_>; N]` is valid.
@@ -74,7 +75,7 @@ impl<T, const N: usize> Array<T, N> {
     }
 
     /// Returns `true`, If the array is full.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -97,7 +98,7 @@ impl<T, const N: usize> Array<T, N> {
     ///
     /// let mut arr: Array<u8, 2> = Array::new();
     /// assert!(arr.is_empty());
-    /// 
+    ///
     /// arr.push(1);
     /// assert!(!arr.is_empty());
     /// ```
@@ -133,7 +134,7 @@ impl<T, const N: usize> Array<T, N> {
     /// arr.push(3);
     /// assert_eq!(&arr[..], [1, 2, 3]);
     /// ```
-    /// 
+    ///
     /// # Panics
     /// Panics if the array is full.
     #[inline(always)]
@@ -154,13 +155,54 @@ impl<T, const N: usize> Array<T, N> {
     /// assert_eq!(arr.pop(), 1);
     /// assert!(arr.is_empty());
     /// ```
-    /// 
+    ///
     /// # Panics
     /// Panics if the array is empty.
     #[inline(always)]
     pub fn pop(&mut self) -> T {
         self.len -= 1;
         unsafe { take(&mut self.data[self.len]) }
+    }
+
+    /// Removes the first element from an array and returns that removed element.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut arr: Array<u8, 3> = Array::from([1, 2]);
+    /// assert_eq!(arr.shift(), 1);
+    /// assert_eq!(arr.shift(), 2);
+    /// assert!(arr.is_empty());
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if the array is empty.
+    #[inline(always)]
+    pub fn shift(&mut self) -> T {
+        // SAFETY: Even if the array is empty, its safe,
+        // Because the `len` is 0. and decrease it by 1, would cause panic, which isn't UB.
+        unsafe { self.remove_at(0) }
+    }
+
+    /// Inserts an element at the beginning of an array.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut arr: Array<u8, 3> = Array::from([1, 2]);
+    /// arr.unshift(0);
+    /// assert_eq!(&arr[..], [0, 1, 2]);
+    /// ```
+    ///
+    /// # Panics
+    /// Panics if the array is full.
+    #[inline(always)]
+    pub fn unshift(&mut self, val: T) {
+        self.insert_at(0, val);
     }
 
     /// Clears the array, removing all values.
@@ -197,17 +239,13 @@ impl<T, const N: usize> Array<T, N> {
     /// list.insert(1, 2);
     /// assert_eq!(&list[..], [1, 2, 3]);
     /// ```
-    /// 
+    ///
     /// # Panics
     /// Panics if the index is out of bounds.
-    #[inline]
+    #[inline(always)]
     pub fn insert(&mut self, index: usize, val: T) {
-        assert!(index <= self.len);
-        for i in (index..self.len).rev() {
-            self.data[i + 1] = replace(&mut self.data[i], MaybeUninit::uninit());
-        }
-        self.data[index] = MaybeUninit::new(val);
-        self.len += 1;
+        assert!(index <= self.len, "index out of bounds");
+        self.insert_at(index, val)
     }
 
     /// Removes an element from position index within the array, shifting all elements after it to the left.
@@ -222,14 +260,29 @@ impl<T, const N: usize> Array<T, N> {
     /// assert_eq!(list.remove(0), 2);
     /// assert_eq!(list.remove(0), 3);
     /// ```
-    /// 
+    ///
     /// # Panics
     /// Panics if the index is out of bounds.
-    #[inline]
+    #[inline(always)]
     pub fn remove(&mut self, index: usize) -> T {
-        assert!(index < self.len);
-        let value = unsafe { take(&mut self.data[index]) };
+        assert!(index < self.len, "index out of bounds");
+        // SAFETY: `index` is in bounds and contains initialized object.
+        unsafe { self.remove_at(index) }
+    }
+
+    /// Ensure that `index` is in bounds.
+    fn insert_at(&mut self, index: usize, val: T) {
+        for i in (index..self.len).rev() {
+            self.data[i + 1] = replace(&mut self.data[i], MaybeUninit::uninit());
+        }
+        self.data[index] = MaybeUninit::new(val);
+        self.len += 1;
+    }
+    
+    /// SAFETY: Caller must ensure that index is valid. and value is properly initialized.
+    unsafe fn remove_at(&mut self, index: usize) -> T {
         self.len -= 1;
+        let value = take(&mut self.data[index]);
         for i in index..self.len {
             self.data[i] = replace(&mut self.data[i + 1], MaybeUninit::uninit());
         }
