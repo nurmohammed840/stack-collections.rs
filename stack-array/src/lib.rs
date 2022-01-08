@@ -34,6 +34,7 @@ impl<T, const N: usize> Array<T, N> {
     /// // or
     /// let arr: Array<u8, 4> = Array::new();
     /// ```
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             len: 0,
@@ -87,7 +88,7 @@ impl<T, const N: usize> Array<T, N> {
         N == self.len
     }
 
-    /// Returns true if the vector contains no elements.
+    /// Returns true if the array contains no elements.
     ///
     /// # Examples
     ///
@@ -173,6 +174,7 @@ impl<T, const N: usize> Array<T, N> {
     /// list.clear();
     /// assert!(list.is_empty());
     /// ```
+    #[inline]
     pub fn clear(&mut self) {
         // SAFETY: slice will contain only initialized objects, So It's safe to drop them.
         for slot in &mut self.data[0..self.len] {
@@ -242,7 +244,7 @@ impl<T, const N: usize> Default for Array<T, N> {
 }
 
 impl<T, const N: usize> AsRef<[T]> for Array<T, N> {
-    #[inline]
+    #[inline(always)]
     fn as_ref(&self) -> &[T] {
         // unsafe { core::mem::transmute(&self.data[..self.len]) }
         // unsafe { slice::from_raw_parts(self.data.as_ptr() as *const _, self.len) }
@@ -253,7 +255,7 @@ impl<T, const N: usize> AsRef<[T]> for Array<T, N> {
 }
 
 impl<T, const N: usize> AsMut<[T]> for Array<T, N> {
-    #[inline]
+    #[inline(always)]
     fn as_mut(&mut self) -> &mut [T] {
         // SAFETY: slice will contain only initialized objects.
         unsafe { &mut *(&mut self.data[..self.len] as *mut [MaybeUninit<T>] as *mut [T]) }
@@ -262,14 +264,14 @@ impl<T, const N: usize> AsMut<[T]> for Array<T, N> {
 
 impl<T, const N: usize> Deref for Array<T, N> {
     type Target = [T];
-    #[inline]
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         self.as_ref()
     }
 }
 
 impl<T, const N: usize> DerefMut for Array<T, N> {
-    #[inline]
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut()
     }
