@@ -2,17 +2,17 @@
 
 This library provides an array type that is similar to the built-in Vec type, but lives on the stack!
 
-You may use this library to store a fixed number of elements of a specific type (even non-copy type!).
+You may use this library to store a fixed number of elements of a specific type (even non-copy types!)
 
 # Example
 
 ```rust
 use stack_array::Array;
 
-let mut array: Array<String; 4> = Array::new();
+let mut arr: Array<String; 4> = Array::new();
 
-array.push("Hello".to_string());
-array.push("World".to_string());
+arr.push("Hello".to_string());
+arr.push("World".to_string());
 
-println!("{:#?}", array);
+println!("{:#?}", arr);
 ```
