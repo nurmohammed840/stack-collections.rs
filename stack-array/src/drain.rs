@@ -11,7 +11,7 @@ pub struct Drain<'a, T: 'a, const N: usize> {
     pub(super) tail_len: usize,
     /// Current remaining range to remove
     pub(super) iter: slice::Iter<'a, T>,
-    pub(super) vec: NonNull<super::Array<T, N>>,
+    pub(super) arr: NonNull<super::Array<T, N>>,
 }
 
 impl<'a, T, const N: usize> Drain<'a, T, N> {
@@ -70,7 +70,7 @@ impl<T, const N: usize> Drop for Drain<'_, T, N> {
             fn drop(&mut self) {
                 if self.0.tail_len > 0 {
                     unsafe {
-                        let source_vec = self.0.vec.as_mut();
+                        let source_vec = self.0.arr.as_mut();
                         // memmove back untouched tail, update to new length
                         let start = source_vec.len();
                         let tail = self.0.tail_start;
@@ -88,7 +88,7 @@ impl<T, const N: usize> Drop for Drain<'_, T, N> {
         let iter = mem::replace(&mut self.iter, (&mut []).iter());
         let drop_len = iter.len();
 
-        let mut vec = self.vec;
+        let mut vec = self.arr;
 
         if mem::size_of::<T>() == 0 {
             // ZSTs have no identity, so we don't need to move them around, we only need to drop the correct amount.

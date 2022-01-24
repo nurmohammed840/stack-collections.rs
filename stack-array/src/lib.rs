@@ -1,6 +1,6 @@
 #![no_std]
 
-//! This library provides an array type that is similar to the built-in Vec type, but lives on the stack!
+//! This library provides an array type that is similar to the built-in arr type, but lives on the stack!
 //!
 //! You can store a fixed number of elements of a specific type (even non-copy types!)
 
@@ -407,7 +407,7 @@ impl<T, const N: usize> Array<T, N> {
         // since we may make some holes during the process.
         unsafe { self.set_len(0) };
 
-        // Vec: [Kept, Kept, Hole, Hole, Hole, Hole, Unchecked, Unchecked]
+        // arr: [Kept, Kept, Hole, Hole, Hole, Hole, Unchecked, Unchecked]
         //      |<-              processed len   ->| ^- next to check
         //                  |<-  deleted cnt     ->|
         //      |<-              original_len                          ->|
@@ -554,7 +554,7 @@ impl<T, const N: usize> Array<T, N> {
             return;
         }
 
-        /* INVARIANT: vec.len() > read >= write > write-1 >= 0 */
+        /* INVARIANT: arr.len() > read >= write > write-1 >= 0 */
         struct FillGapOnDrop<'a, T, const N: usize> {
             /* Offset of the element we want to check if it is duplicate */
             read: usize,
@@ -563,8 +563,8 @@ impl<T, const N: usize> Array<T, N> {
              * when we find it. */
             write: usize,
 
-            /* The Vec that would need correction if `same_bucket` panicked */
-            vec: &'a mut Array<T, N>,
+            /* The arr that would need correction if `same_bucket` panicked */
+            arr: &'a mut Array<T, N>,
         }
 
         impl<'a, T, const N: usize> Drop for FillGapOnDrop<'a, T, N> {
@@ -575,27 +575,27 @@ impl<T, const N: usize> Array<T, N> {
                  * and `len - read` never overflow and that the copy is always
                  * in-bounds. */
                 unsafe {
-                    let ptr = self.vec.as_mut_ptr();
-                    let len = self.vec.len();
+                    let ptr = self.arr.as_mut_ptr();
+                    let len = self.arr.len();
 
                     /* How many items were left when `same_bucket` paniced.
-                     * Basically vec[read..].len() */
+                     * Basically arr[read..].len() */
                     let items_left = len.wrapping_sub(self.read);
 
-                    /* Pointer to first item in vec[write..write+items_left] slice */
+                    /* Pointer to first item in arr[write..write+items_left] slice */
                     let dropped_ptr = ptr.add(self.write);
-                    /* Pointer to first item in vec[read..] slice */
+                    /* Pointer to first item in arr[read..] slice */
                     let valid_ptr = ptr.add(self.read);
 
-                    /* Copy `vec[read..]` to `vec[write..write+items_left]`.
+                    /* Copy `arr[read..]` to `arr[write..write+items_left]`.
                      * The slices can overlap, so `copy_nonoverlapping` cannot be used */
                     ptr::copy(valid_ptr, dropped_ptr, items_left);
 
                     /* How many items have been already dropped
-                     * Basically vec[read..write].len() */
+                     * Basically arr[read..write].len() */
                     let dropped = self.read.wrapping_sub(self.write);
 
-                    self.vec.set_len(len - dropped);
+                    self.arr.set_len(len - dropped);
                 }
             }
         }
@@ -603,11 +603,11 @@ impl<T, const N: usize> Array<T, N> {
         let mut gap = FillGapOnDrop {
             read: 1,
             write: 1,
-            vec: self,
+            arr: self,
         };
-        let ptr = gap.vec.as_mut_ptr();
+        let ptr = gap.arr.as_mut_ptr();
 
-        /* Drop items while going through Vec, it should be more efficient than
+        /* Drop items while going through arr, it should be more efficient than
          * doing slice partition_dedup + truncate */
 
         /* SAFETY: Because of the invariant, read_ptr, prev_ptr and write_ptr
@@ -639,7 +639,7 @@ impl<T, const N: usize> Array<T, N> {
             /* Technically we could let `gap` clean up with its Drop, but
              * when `same_bucket` is guaranteed to not panic, this bloats a little
              * the codegen, so we just do it manually */
-            gap.vec.set_len(gap.write);
+            gap.arr.set_len(gap.write);
             mem::forget(gap);
         }
     }
@@ -740,9 +740,9 @@ impl<T, const N: usize> Array<T, N> {
     /// use stack_array::Array;
     /// 
     /// let mut arr: Array<u8, 3> = Array::from([1, 2, 3]);
-    /// let vec: Vec<_> = arr.drain(1..).collect();
+    /// let arr: arr<_> = arr.drain(1..).collect();
     /// assert_eq!(arr[..], [1]);
-    /// assert_eq!(vec[..], [2, 3]);
+    /// assert_eq!(arr[..], [2, 3]);
     ///
     /// // A full range clears the array
     /// arr.drain(..);
@@ -759,7 +759,7 @@ impl<T, const N: usize> Array<T, N> {
         // are accessible at all if the Drain's destructor never gets to run.
         //
         // Drain will ptr::read out the values to remove.
-        // When finished, remaining tail of the vec is copied back to cover
+        // When finished, remaining tail of the arr is copied back to cover
         // the hole, and the array length is restored to the new length.
         //
         let len = self.len();
@@ -775,7 +775,7 @@ impl<T, const N: usize> Array<T, N> {
         };
 
         unsafe {
-            // set self.vec length's to start, to be safe in case Drain is leaked
+            // set self.arr length's to start, to be safe in case Drain is leaked
             self.set_len(start);
             // Use the borrow in the IterMut to indicate borrowing behavior of the
             // whole Drain iterator (like &mut T).
@@ -784,7 +784,7 @@ impl<T, const N: usize> Array<T, N> {
                 tail_start: end,
                 tail_len: len - end,
                 iter: range_slice.iter(),
-                vec: NonNull::from(self),
+                arr: NonNull::from(self),
             }
         }
     }
