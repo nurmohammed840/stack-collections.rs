@@ -132,8 +132,8 @@ impl<T, const N: usize> Array<T, N> {
     /// assert_eq!(arr[..], []);
     /// ```
     ///
-    /// [`clear`]: Vec::clear
-    /// [`drain`]: Vec::drain
+    /// [`clear`]: Array::clear
+    /// [`drain`]: Array::drain
     pub fn truncate(&mut self, len: usize) {
         // This is safe because:
         //
@@ -183,7 +183,7 @@ impl<T, const N: usize> Array<T, N> {
     /// is never written to (except inside an `UnsafeCell`) using this pointer or any pointer
     /// derived from it. If you need to mutate the contents of the slice, use [`as_mut_ptr`].
     ///
-    /// [`as_mut_ptr`]: Vec::as_mut_ptr
+    /// [`as_mut_ptr`]: Array::as_mut_ptr
     #[inline]
     pub fn as_ptr(&self) -> *const T {
         // We shadow the slice method of the same name to avoid going through
@@ -223,7 +223,7 @@ impl<T, const N: usize> Array<T, N> {
     /// This does not preserve ordering, but is *O*(1).
     /// If you need to preserve the element order, use [`remove`] instead.
     ///
-    /// [`remove`]: Vec::remove
+    /// [`remove`]: Array::remove
     ///
     /// # Panics
     ///
@@ -325,7 +325,7 @@ impl<T, const N: usize> Array<T, N> {
     /// worst-case performance of *O*(*n*). If you don't need the order of elements
     /// to be preserved, use [`swap_remove`] instead.
     ///
-    /// [`swap_remove`]: Vec::swap_remove
+    /// [`swap_remove`]: Array::swap_remove
     ///
     /// # Examples
     ///
