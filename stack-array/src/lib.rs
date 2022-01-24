@@ -740,9 +740,9 @@ impl<T, const N: usize> Array<T, N> {
     /// use stack_array::Array;
     /// 
     /// let mut arr: Array<u8, 3> = Array::from([1, 2, 3]);
-    /// let arr: arr<_> = arr.drain(1..).collect();
+    /// let vec: Vec<_> = arr.drain(1..).collect();
     /// assert_eq!(arr[..], [1]);
-    /// assert_eq!(arr[..], [2, 3]);
+    /// assert_eq!(vec[..], [2, 3]);
     ///
     /// // A full range clears the array
     /// arr.drain(..);
