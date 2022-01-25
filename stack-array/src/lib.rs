@@ -710,7 +710,10 @@ impl<T, const N: usize> Array<T, N> {
     /// assert_eq!(arr[..], [1, 2, 3, 4, 5, 6]);
     /// ```
     #[inline]
-    pub fn append(&mut self, other: impl AsRef<[T]>) {
+    pub fn append(&mut self, other: impl AsRef<[T]>)
+    where
+        T: Copy,
+    {
         let other = other.as_ref();
         let count = other.len();
         if self.remaining_capacity() < count {
@@ -738,7 +741,7 @@ impl<T, const N: usize> Array<T, N> {
     ///
     /// ```
     /// use stack_array::Array;
-    /// 
+    ///
     /// let mut arr: Array<u8, 3> = Array::from([1, 2, 3]);
     /// let vec: Vec<_> = arr.drain(1..).collect();
     /// assert_eq!(arr[..], [1]);
@@ -891,7 +894,7 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Array<T, N> {
     }
 }
 
-impl<T, const N: usize> From<&[T]> for Array<T, N> {
+impl<T: Copy, const N: usize> From<&[T]> for Array<T, N> {
     fn from(values: &[T]) -> Self {
         let mut array = Self::new();
         array.append(values);
@@ -902,7 +905,9 @@ impl<T, const N: usize> From<&[T]> for Array<T, N> {
 impl<T, const N: usize, const S: usize> From<[T; S]> for Array<T, N> {
     fn from(values: [T; S]) -> Self {
         let mut array = Self::new();
-        array.append(values);
+        for v in values {
+            array.push(v);
+        }
         array
     }
 }
