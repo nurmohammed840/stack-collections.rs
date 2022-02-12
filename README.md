@@ -1,6 +1,6 @@
-This repo provide some useful data-structures, such as: Array, HashMap, HashSet, BTreeMap, BTreeSet, etc...
+Some useful data-structures, such as: Array, HashMap, HashSet, BTreeMap, BTreeSet, etc... But lives on the stack.
 
-That lives on the stack. It's a good choice for fixed size storage.
+Good choice for fixed size storage.
 
 ### Implementation
 
