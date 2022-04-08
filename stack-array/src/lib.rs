@@ -1,20 +1,18 @@
 //! This library provides an array type that is similar to the built-in arr type, but lives on the stack!
 
-#![allow(warnings)]
-// #![no_std]
-
 mod interface;
 pub use interface::ArrayInterface;
 
 use core::{
     fmt, mem,
     mem::MaybeUninit,
-    ops::{Bound, Deref, DerefMut, RangeBounds},
+    ops::{Deref, DerefMut},
     ptr,
-    ptr::NonNull,
-    slice,
 };
-use std::{ops::{Index, IndexMut}, slice::SliceIndex};
+use std::{
+    ops::{Index, IndexMut},
+    slice::SliceIndex,
+};
 
 /// A data structure for storing and manipulating fixed number of elements of a specific type.
 pub struct Array<T, const N: usize> {
@@ -409,106 +407,107 @@ impl<T, I: SliceIndex<[T]>, const N: usize> IndexMut<I> for Array<T, N> {
 
 impl<T> ArrayInterface<T> for std::vec::Vec<T> {
     fn new() -> Self {
-        Self::new()
+        Vec::new()
     }
     fn capacity(&self) -> usize {
-        Self::capacity(self)
+        Vec::capacity(self)
     }
 
     fn as_ptr(&self) -> *const T {
-        Self::as_ptr(self)
+        Vec::as_ptr(self)
     }
 
     fn as_mut_ptr(&mut self) -> *mut T {
-        Self::as_mut_ptr(self)
+        Vec::as_mut_ptr(self)
     }
 
     unsafe fn set_len(&mut self, len: usize) {
-        Self::set_len(self, len)
+        Vec::set_len(self, len)
     }
 
     fn insert(&mut self, index: usize, element: T) {
-        Self::insert(self, index, element)
+        Vec::insert(self, index, element)
     }
 
+    #[allow(unconditional_recursion, unstable_name_collisions)]
     fn retain_mut<F>(&mut self, f: F)
     where
         F: FnMut(&mut T) -> bool,
     {
-        Self::retain_mut(self, f)
+        Vec::retain_mut(self, f)
     }
 
     fn dedup_by<F>(&mut self, same_bucket: F)
     where
         F: FnMut(&mut T, &mut T) -> bool,
     {
-        Self::dedup_by(self, same_bucket)
+        Vec::dedup_by(self, same_bucket)
     }
 
     fn push(&mut self, value: T) {
-        Self::push(self, value)
+        Vec::push(self, value)
     }
 
     fn len(&self) -> usize {
-        Self::len(self)
+        Vec::len(self)
     }
 
     fn pop(&mut self) -> T {
-        Self::pop(self).unwrap()
+        Vec::pop(self).unwrap()
     }
 
     fn truncate(&mut self, len: usize) {
-        Self::truncate(self, len)
+        Vec::truncate(self, len)
     }
 
     fn as_slice(&self) -> &[T] {
-        Self::as_slice(self)
+        Vec::as_slice(self)
     }
 
     fn as_mut_slice(&mut self) -> &mut [T] {
-        Self::as_mut_slice(self)
+        Vec::as_mut_slice(self)
     }
 
     fn swap_remove(&mut self, index: usize) -> T {
-        Self::swap_remove(self, index)
+        Vec::swap_remove(self, index)
     }
 
     fn remove(&mut self, index: usize) -> T {
-        Self::remove(self, index)
+        Vec::remove(self, index)
     }
 
-    fn retain<F>(&mut self, mut f: F)
+    fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&T) -> bool,
     {
-        Self::retain(self, f)        
-   }
+        Vec::retain(self, f)
+    }
 
-    fn dedup_by_key<F, K>(&mut self, mut key: F)
+    fn dedup_by_key<F, K>(&mut self, key: F)
     where
         F: FnMut(&mut T) -> K,
         K: PartialEq,
     {
-        Self::dedup_by_key(self, key)      
+        Vec::dedup_by_key(self, key)
     }
 
     fn append(&mut self, other: &mut Self) {
-        Self::append(self, other)
+        Vec::append(self, other)
     }
 
     fn clear(&mut self) {
-        Self::clear(self)
+        Vec::clear(self)
     }
 
     fn is_empty(&self) -> bool {
-        Self::is_empty(self)
+        Vec::is_empty(self)
     }
 
     // =========================================================================
 
     fn ensure_capacity(&mut self, new_len: usize) {
         if new_len > self.capacity() {
-            Self::reserve(self, new_len - self.len())
+            Vec::reserve(self, new_len - self.len())
         }
     }
 }
