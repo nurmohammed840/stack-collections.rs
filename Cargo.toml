@@ -1,9 +1,6 @@
 [workspace]
 
 members = [
-    # "hash-map",
-    # "hash-set",
-    # "btree-map",
-    # "btree-set",
     "stack-array",
+    # "stack-alloc",
 ]
