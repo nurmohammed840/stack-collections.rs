@@ -10,8 +10,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// # #![allow(unused_mut)]
-    /// let mut arr: Array<u8, 64> = Vec::new();
+    /// let mut arr: Array<u8, 64> = Array::new();
     /// ```
     fn new() -> Self;
 
@@ -20,7 +19,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let arr: Array<u8, 4> = Array::new();
     /// assert_eq!(arr.capacity(), 4);
@@ -132,7 +131,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<&str, 4> = Array::from(["foo", "bar", "baz", "qux"]);
     ///
@@ -173,7 +172,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut list: Array<u8, 3> = Array::from([3]);
     /// list.insert(0, 1);
@@ -197,7 +196,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
     /// assert_eq!(list.remove(0), 1);
@@ -246,7 +245,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 4> = Array::from([1, 2, 3, 4]);
     ///
@@ -258,7 +257,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// external state may be used to decide which elements to keep.
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 5> = Array::from([1, 2, 3, 4, 5]);
     /// let keep = [false, true, true, false, true];
@@ -285,7 +284,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 5> = Array::from([10, 20, 21, 30, 20]);
     ///
@@ -330,7 +329,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
     /// list.clear();
@@ -346,7 +345,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let arr: Array<u8, 3> = Array::from([1, 2]);
     /// assert_eq!(arr.len(), 2);
@@ -358,7 +357,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 2> = Array::new();
     /// assert!(arr.is_empty());
@@ -387,7 +386,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```rust
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 3> = Array::from([1, 2]);
     /// assert_eq!(arr.pop(), 2);
@@ -404,7 +403,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let arr: Array<u8, 3> = Array::from([1, 2]);
     /// assert_eq!(arr.remaining_capacity(), 1);
@@ -423,10 +422,10 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// # Examples
     ///
     /// ```
-    /// use stack_array::Array;
+    /// use stack_array::*;
     ///
     /// let mut arr: Array<u8, 6> = Array::from([1, 2, 3]);
-    /// arr.append([4, 5, 6]);
+    /// arr.append_slice([4, 5, 6]);
     /// assert_eq!(arr[..], [1, 2, 3, 4, 5, 6]);
     /// ```
     #[inline]

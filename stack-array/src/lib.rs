@@ -387,6 +387,13 @@ impl<T: Copy, const N: usize> From<&[T]> for Array<T, N> {
         array
     }
 }
+impl<T: Copy, const N: usize, const O: usize> From<[T; O]> for Array<T, N> {
+    fn from(values: [T; O]) -> Self {
+        let mut array = Self::new();
+        array.append_slice(values);
+        array
+    }
+}
 
 impl<T, I: SliceIndex<[T]>, const N: usize> Index<I> for Array<T, N> {
     type Output = I::Output;
