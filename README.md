@@ -5,7 +5,4 @@ Good choice for fixed size storage.
 ### Implementation
 
 - [x] [Array](https://docs.rs/stack-array/)
-- [ ] BTreeMap - In progress 🏃
-- [ ] HashMap
-- [ ] HashSet
-- [ ] BTreeSet
+- [ ] String - In progress 🏃
