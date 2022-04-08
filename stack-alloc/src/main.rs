@@ -34,10 +34,4 @@ unsafe impl<const N: usize> Allocator for StackAllocator<N> {
 
 fn main() {
     let salloc: StackAllocator<4096> = StackAllocator::new();
-    // let mut v: Vec<u8, _> = Vec::new_in(salloc);
-    let mut v: Vec<u16, _> = Vec::with_capacity_in(10, salloc);
-    v.reserve(10);
-    v.reserve(200);
-    // v.push(10);
-    println!("{:#?}", v);
 }

@@ -1,11 +1,5 @@
 use crate::*;
 
-use std::vec::Vec;
-
-// use stack_array::Array;
-//
-// let arr: Array<u8, 4> = Array::new();
-
 pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
     /// Constructs a new, empty `Vec<T>`.
     ///
@@ -14,8 +8,10 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
     /// # Examples
     ///
     /// ```
+    /// use stack_array::*;
+    ///
     /// # #![allow(unused_mut)]
-    /// let mut vec: Vec<i32> = Vec::new();
+    /// let mut arr: Array<u8, 64> = Vec::new();
     /// ```
     fn new() -> Self;
 
@@ -118,7 +114,7 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
     /// - The elements at `old_len..new_len` must be initialized.
     ///
     /// [`capacity()`]: Vec::capacity
-    fn set_len(&mut self, len: usize);
+    unsafe fn set_len(&mut self, len: usize);
 
     /// Removes an element from the array and returns it.
     ///
@@ -313,7 +309,18 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
     #[inline]
     fn append(&mut self, other: &mut Self) {
         unsafe {
-            // self.append_elements(other.as_slice() as _);
+            let count = other.len();
+            let len = self.len();
+            let total_len = len + count;
+
+            self.ensure_capacity(total_len);
+
+            ptr::copy_nonoverlapping(
+                other.as_ptr() as *const T,
+                self.as_mut_ptr().add(len),
+                count,
+            );
+            self.set_len(total_len);
             other.set_len(0);
         }
     }
@@ -366,10 +373,10 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
 
     //============================================================
 
-    fn ensure_capacity(&mut self, total_capacity: usize) {
-        if total_capacity > self.capacity() {
+    fn ensure_capacity(&mut self, total_cap: usize) {
+        if total_cap > self.capacity() {
             panic!(
-                "Array is full, Max capacity: {}, But got: {total_capacity}",
+                "Array is full, Max capacity: {}, But got: {total_cap}",
                 self.capacity()
             );
         }
@@ -407,33 +414,36 @@ pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> {
         self.capacity() - self.len()
     }
 
-    // /// Moves all the elements of `other` into `Self`
-    // ///
-    // /// # Panics
-    // ///
-    // /// Panics if the number of elements in the array overflows.
-    // ///
-    // /// # Examples
-    // ///
-    // /// ```
-    // /// use stack_array::Array;
-    // ///
-    // /// let mut arr: Array<u8, 6> = Array::from([1, 2, 3]);
-    // /// arr.append([4, 5, 6]);
-    // /// assert_eq!(arr[..], [1, 2, 3, 4, 5, 6]);
-    // /// ```
-    // #[inline]
-    // pub fn append(&mut self, other: impl AsRef<[T]>)
-    // where
-    //     T: Copy,
-    // {
-    //     let other = other.as_ref();
-    //     let count = other.len();
-    //     if self.remaining_capacity() < count {
-    //         panic!("Array is full")
-    //     }
-    //     let len = self.len();
-    //     unsafe { ptr::copy_nonoverlapping(other.as_ptr(), self.as_mut_ptr().add(len), count) };
-    //     self.len += count;
-    // }
+    /// Moves all the elements of `other` into `Self`
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of elements in the array overflows.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::Array;
+    ///
+    /// let mut arr: Array<u8, 6> = Array::from([1, 2, 3]);
+    /// arr.append([4, 5, 6]);
+    /// assert_eq!(arr[..], [1, 2, 3, 4, 5, 6]);
+    /// ```
+    #[inline]
+    fn append_slice(&mut self, other: impl AsRef<[T]>)
+    where
+        T: Copy,
+    {
+        let other = other.as_ref();
+        let count = other.len();
+        let len = self.len();
+
+        let total_len = len + count;
+        self.ensure_capacity(total_len);
+
+        unsafe {
+            ptr::copy_nonoverlapping(other.as_ptr(), self.as_mut_ptr().add(len), count);
+            self.set_len(total_len);
+        }
+    }
 }

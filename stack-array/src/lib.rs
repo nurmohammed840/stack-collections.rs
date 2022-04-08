@@ -3,11 +3,7 @@
 #![allow(warnings)]
 // #![no_std]
 
-
-// mod drain;
 mod interface;
-
-// use drain::Drain;
 pub use interface::ArrayInterface;
 
 use core::{
@@ -18,6 +14,7 @@ use core::{
     ptr::NonNull,
     slice,
 };
+use std::{ops::{Index, IndexMut}, slice::SliceIndex};
 
 /// A data structure for storing and manipulating fixed number of elements of a specific type.
 pub struct Array<T, const N: usize> {
@@ -50,7 +47,7 @@ impl<T, const N: usize> ArrayInterface<T> for Array<T, N> {
     }
 
     #[inline]
-    fn set_len(&mut self, new_len: usize) {
+    unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
         self.len = new_len;
     }
@@ -329,7 +326,7 @@ impl<T, const N: usize> Array<T, N> {
     /// ```
     #[inline]
     pub const fn is_full(&self) -> bool {
-        N == self.len
+        self.len >= N
     }
 }
 
@@ -385,20 +382,133 @@ impl<T: fmt::Debug, const N: usize> fmt::Debug for Array<T, N> {
     }
 }
 
-// impl<T: Copy, const N: usize> From<&[T]> for Array<T, N> {
-//     fn from(values: &[T]) -> Self {
-//         let mut array = Self::new();
-//         array.append(values);
-//         array
-//     }
-// }
+impl<T: Copy, const N: usize> From<&[T]> for Array<T, N> {
+    fn from(values: &[T]) -> Self {
+        let mut array = Self::new();
+        array.append_slice(values);
+        array
+    }
+}
 
-// impl<T, const N: usize, const S: usize> From<[T; S]> for Array<T, N> {
-//     fn from(values: [T; S]) -> Self {
-//         let mut array = Self::new();
-//         for v in values {
-//             array.push(v);
-//         }
-//         array
-//     }
-// }
+impl<T, I: SliceIndex<[T]>, const N: usize> Index<I> for Array<T, N> {
+    type Output = I::Output;
+    #[inline]
+    fn index(&self, index: I) -> &Self::Output {
+        Index::index(&**self, index)
+    }
+}
+
+impl<T, I: SliceIndex<[T]>, const N: usize> IndexMut<I> for Array<T, N> {
+    #[inline]
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        IndexMut::index_mut(&mut **self, index)
+    }
+}
+
+// --------------------------------------------------------------
+
+impl<T> ArrayInterface<T> for std::vec::Vec<T> {
+    fn new() -> Self {
+        Self::new()
+    }
+    fn capacity(&self) -> usize {
+        Self::capacity(self)
+    }
+
+    fn as_ptr(&self) -> *const T {
+        Self::as_ptr(self)
+    }
+
+    fn as_mut_ptr(&mut self) -> *mut T {
+        Self::as_mut_ptr(self)
+    }
+
+    unsafe fn set_len(&mut self, len: usize) {
+        Self::set_len(self, len)
+    }
+
+    fn insert(&mut self, index: usize, element: T) {
+        Self::insert(self, index, element)
+    }
+
+    fn retain_mut<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        Self::retain_mut(self, f)
+    }
+
+    fn dedup_by<F>(&mut self, same_bucket: F)
+    where
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        Self::dedup_by(self, same_bucket)
+    }
+
+    fn push(&mut self, value: T) {
+        Self::push(self, value)
+    }
+
+    fn len(&self) -> usize {
+        Self::len(self)
+    }
+
+    fn pop(&mut self) -> T {
+        Self::pop(self).unwrap()
+    }
+
+    fn truncate(&mut self, len: usize) {
+        Self::truncate(self, len)
+    }
+
+    fn as_slice(&self) -> &[T] {
+        Self::as_slice(self)
+    }
+
+    fn as_mut_slice(&mut self) -> &mut [T] {
+        Self::as_mut_slice(self)
+    }
+
+    fn swap_remove(&mut self, index: usize) -> T {
+        Self::swap_remove(self, index)
+    }
+
+    fn remove(&mut self, index: usize) -> T {
+        Self::remove(self, index)
+    }
+
+    fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        Self::retain(self, f)        
+   }
+
+    fn dedup_by_key<F, K>(&mut self, mut key: F)
+    where
+        F: FnMut(&mut T) -> K,
+        K: PartialEq,
+    {
+        Self::dedup_by_key(self, key)      
+    }
+
+    fn append(&mut self, other: &mut Self) {
+        Self::append(self, other)
+    }
+
+    fn clear(&mut self) {
+        Self::clear(self)
+    }
+
+    fn is_empty(&self) -> bool {
+        Self::is_empty(self)
+    }
+
+    // =========================================================================
+
+    fn ensure_capacity(&mut self, new_len: usize) {
+        if new_len > self.capacity() {
+            Self::reserve(self, new_len - self.len())
+        }
+    }
+}
