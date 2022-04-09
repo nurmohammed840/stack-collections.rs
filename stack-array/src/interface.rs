@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait ArrayInterface<T>: AsRef<[T]> + AsMut<[T]> + Default {
+pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// Constructs a new, empty `Vec<T>`.
     ///
     /// The array will not allocate until elements are pushed onto it.

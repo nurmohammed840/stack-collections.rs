@@ -1,4 +1,4 @@
-use stack_array::{Array, ArrayInterface};
+use stack_array::{ArrayBuf, Array};
 use std::mem::size_of;
 
 struct DropCounter<'a> {
@@ -13,21 +13,21 @@ impl Drop for DropCounter<'_> {
 
 #[test]
 fn test_small_vec_struct() {
-    assert_eq!(size_of::<Array<u8, 8>>(), 16);
+    assert_eq!(size_of::<ArrayBuf<u8, 8>>(), 16);
 }
 
 #[test]
 fn test_double_drop() {
     struct TwoArray<T> {
-        x: Array<T, 2>,
-        y: Array<T, 3>,
+        x: ArrayBuf<T, 2>,
+        y: ArrayBuf<T, 3>,
     }
 
     let (mut count_x, mut count_y) = (0, 0);
     {
         let mut tv = TwoArray {
-            x: Array::new(),
-            y: Array::new(),
+            x: ArrayBuf::new(),
+            y: ArrayBuf::new(),
         };
         tv.x.push(DropCounter {
             count: &mut count_x,
@@ -50,7 +50,7 @@ fn test_double_drop() {
 
 #[test]
 fn test_indexing() {
-    let v: Array<isize, 2> = Array::from([10, 20].as_slice());
+    let v: ArrayBuf<isize, 2> = ArrayBuf::from([10, 20].as_slice());
     assert_eq!(v[0], 10);
     assert_eq!(v[1], 20);
     let mut x: usize = 0;
@@ -63,10 +63,10 @@ fn test_indexing() {
 
 #[test]
 fn test_debug_fmt() {
-    let arr1: Array<isize, 2> = Array::new();
+    let arr1: ArrayBuf<isize, 2> = ArrayBuf::new();
     assert_eq!("[]", format!("{:?}", arr1));
 
-    let vec2: Array<_, 2> = Array::from([0, 1].as_slice());
+    let vec2: ArrayBuf<_, 2> = ArrayBuf::from([0, 1].as_slice());
     assert_eq!("[0, 1]", format!("{:?}", vec2));
 
     let slice: &[isize] = &[4, 5];
@@ -75,7 +75,7 @@ fn test_debug_fmt() {
 
 #[test]
 fn test_push() {
-    let mut v: Array<_, 3> = Array::new();
+    let mut v: ArrayBuf<_, 3> = ArrayBuf::new();
     v.push(1);
     assert_eq!(v.as_slice(), [1]);
     v.push(2);
@@ -86,7 +86,7 @@ fn test_push() {
 
 #[test]
 fn test_slice_from_ref() {
-    let values: Array<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
+    let values: ArrayBuf<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
     let slice = &values[1..3];
 
     assert_eq!(slice, [2, 3]);
@@ -94,7 +94,7 @@ fn test_slice_from_ref() {
 
 #[test]
 fn test_slice_from_mut() {
-    let mut values: Array<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
+    let mut values: ArrayBuf<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
     {
         let slice = &mut values[2..];
         assert!(slice == [3, 4, 5]);
@@ -108,7 +108,7 @@ fn test_slice_from_mut() {
 
 #[test]
 fn test_slice_to_mut() {
-    let mut values: Array<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
+    let mut values: ArrayBuf<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
     {
         let slice = &mut values[..2];
         assert!(slice == [1, 2]);
@@ -121,7 +121,7 @@ fn test_slice_to_mut() {
 
 #[test]
 fn test_split_at_mut() {
-    let mut values: Array<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
+    let mut values: ArrayBuf<_, 5> = [1, 2, 3, 4, 5].as_slice().into();
     {
         let (left, right) = values.split_at_mut(2);
         {
@@ -158,12 +158,12 @@ fn test_clone() {
 
 #[test]
 fn test_retain() {
-    let mut arr: Array<_, 4> = [1, 2, 3, 4].as_slice().into();
+    let mut arr: ArrayBuf<_, 4> = [1, 2, 3, 4].as_slice().into();
     arr.retain(|&x| x % 2 == 0);
     assert_eq!(arr.as_ref(), [2, 4]);
 }
 
-type Arr = Array<u8, 10>;
+type Arr = ArrayBuf<u8, 10>;
 macro_rules! arr {
     () => (
         Arr::new()

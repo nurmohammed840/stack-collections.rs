@@ -1,7 +1,7 @@
 //! This library provides an array type that is similar to the built-in arr type, but lives on the stack!
 
 mod interface;
-pub use interface::ArrayInterface;
+pub use interface::Array;
 
 use core::{
     fmt, mem,
@@ -15,12 +15,12 @@ use std::{
 };
 
 /// A data structure for storing and manipulating fixed number of elements of a specific type.
-pub struct Array<T, const N: usize> {
+pub struct ArrayBuf<T, const N: usize> {
     len: usize,
     buf: [MaybeUninit<T>; N],
 }
 
-impl<T, const N: usize> ArrayInterface<T> for Array<T, N> {
+impl<T, const N: usize> Array<T> for ArrayBuf<T, N> {
     #[inline]
     fn new() -> Self {
         Self {
@@ -107,7 +107,7 @@ impl<T, const N: usize> ArrayInterface<T> for Array<T, N> {
         // It shifts unchecked elements to cover holes and `set_len` to the correct length.
         // In cases when predicate and `drop` never panick, it will be optimized out.
         struct BackshiftOnDrop<'a, T, const N: usize> {
-            v: &'a mut Array<T, N>,
+            v: &'a mut ArrayBuf<T, N>,
             processed_len: usize,
             deleted_cnt: usize,
             original_len: usize,
@@ -205,7 +205,7 @@ impl<T, const N: usize> ArrayInterface<T> for Array<T, N> {
             write: usize,
 
             /* The Vec that would need correction if `same_bucket` panicked */
-            vec: &'a mut Array<T, N>,
+            vec: &'a mut ArrayBuf<T, N>,
         }
 
         impl<'a, T, const N: usize> Drop for FillGapOnDrop<'a, T, N> {
@@ -311,7 +311,7 @@ impl<T, const N: usize> ArrayInterface<T> for Array<T, N> {
     }
 }
 
-impl<T, const N: usize> Array<T, N> {
+impl<T, const N: usize> ArrayBuf<T, N> {
     /// Returns `true`, If the array is full.
     ///
     /// # Examples
@@ -328,66 +328,64 @@ impl<T, const N: usize> Array<T, N> {
     }
 }
 
-impl<T, const N: usize> Default for Array<T, N> {
+impl<T, const N: usize> Default for ArrayBuf<T, N> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, const N: usize> AsRef<[T]> for Array<T, N> {
+impl<T, const N: usize> AsRef<[T]> for ArrayBuf<T, N> {
     #[inline]
     fn as_ref(&self) -> &[T] {
-        // SAFETY: slice will contain only initialized objects.
-        unsafe { &*(self.buf.get_unchecked(..self.len) as *const [MaybeUninit<T>] as *const [T]) }
+        self
     }
 }
 
-impl<T, const N: usize> AsMut<[T]> for Array<T, N> {
+impl<T, const N: usize> AsMut<[T]> for ArrayBuf<T, N> {
     #[inline]
     fn as_mut(&mut self) -> &mut [T] {
-        // SAFETY: slice will contain only initialized objects.
-        unsafe {
-            &mut *(self.buf.get_unchecked_mut(..self.len) as *mut [MaybeUninit<T>] as *mut [T])
-        }
+        self
     }
 }
 
-impl<T, const N: usize> Deref for Array<T, N> {
+impl<T, const N: usize> Deref for ArrayBuf<T, N> {
     type Target = [T];
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.as_ref()
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { &*(self.buf.get_unchecked(..self.len) as *const [_] as *const _) }
     }
 }
 
-impl<T, const N: usize> DerefMut for Array<T, N> {
+impl<T, const N: usize> DerefMut for ArrayBuf<T, N> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_mut()
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { &mut *(self.buf.get_unchecked_mut(..self.len) as *mut [_] as *mut _) }
     }
 }
 
-impl<T, const N: usize> Drop for Array<T, N> {
+impl<T, const N: usize> Drop for ArrayBuf<T, N> {
     fn drop(&mut self) {
         self.clear();
     }
 }
 
-impl<T: fmt::Debug, const N: usize> fmt::Debug for Array<T, N> {
+impl<T: fmt::Debug, const N: usize> fmt::Debug for ArrayBuf<T, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T: Copy, const N: usize> From<&[T]> for Array<T, N> {
+impl<T: Copy, const N: usize> From<&[T]> for ArrayBuf<T, N> {
     fn from(values: &[T]) -> Self {
         let mut array = Self::new();
         array.append_slice(values);
         array
     }
 }
-impl<T: Copy, const N: usize, const O: usize> From<[T; O]> for Array<T, N> {
+impl<T: Copy, const N: usize, const O: usize> From<[T; O]> for ArrayBuf<T, N> {
     fn from(values: [T; O]) -> Self {
         let mut array = Self::new();
         array.append_slice(values);
@@ -395,7 +393,7 @@ impl<T: Copy, const N: usize, const O: usize> From<[T; O]> for Array<T, N> {
     }
 }
 
-impl<T, I: SliceIndex<[T]>, const N: usize> Index<I> for Array<T, N> {
+impl<T, I: SliceIndex<[T]>, const N: usize> Index<I> for ArrayBuf<T, N> {
     type Output = I::Output;
     #[inline]
     fn index(&self, index: I) -> &Self::Output {
@@ -403,7 +401,7 @@ impl<T, I: SliceIndex<[T]>, const N: usize> Index<I> for Array<T, N> {
     }
 }
 
-impl<T, I: SliceIndex<[T]>, const N: usize> IndexMut<I> for Array<T, N> {
+impl<T, I: SliceIndex<[T]>, const N: usize> IndexMut<I> for ArrayBuf<T, N> {
     #[inline]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut **self, index)
@@ -412,10 +410,11 @@ impl<T, I: SliceIndex<[T]>, const N: usize> IndexMut<I> for Array<T, N> {
 
 // --------------------------------------------------------------
 
-impl<T> ArrayInterface<T> for std::vec::Vec<T> {
+impl<T> Array<T> for std::vec::Vec<T> {
     fn new() -> Self {
         Vec::new()
     }
+    
     fn capacity(&self) -> usize {
         Vec::capacity(self)
     }
