@@ -447,6 +447,21 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         }
     }
 
+    /// Appends an element to the back of a collection.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::*;
+    /// 
+    /// let mut arr: ArrayBuf<u8, 3> = [1, 2].as_slice().into();
+    /// arr.push(3);
+    /// assert_eq!(arr, [1, 2, 3]);
+    /// ```
     #[inline]
     fn push(&mut self, value: T) {
         // This will panic or abort if we would allocate > isize::MAX bytes
@@ -461,9 +476,25 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
             self.set_len(total_len);
         }
     }
-
+    /// Moves all the elements of other into Self, leaving other empty
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the number of elements in the vector overflows a `usize`.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::*;
+    /// 
+    /// let mut arr: ArrayBuf<u8, 6> = ArrayBuf::from([1, 2, 3].as_ref());
+    /// let mut arr2 = ArrayBuf::from([4, 5, 6]);
+    /// arr.append(&mut arr2);
+    /// assert_eq!(arr, [1, 2, 3, 4, 5, 6]);
+    /// assert!(arr2.is_empty());
+    /// ```
     #[inline]
-    fn append(&mut self, other: &mut Self) {
+    fn append(&mut self, other: &mut impl Array<T>) {
         unsafe {
             let count = other.len();
             let len = self.len();
@@ -534,10 +565,9 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```rust
     /// use stack_array::*;
     ///
-    /// let mut arr: ArrayBuf<u8, 3> = ArrayBuf::from([1, 2].as_ref());
-    /// assert_eq!(arr.pop(), Some(2));
+    /// let mut arr = ArrayBuf::from([1]);
     /// assert_eq!(arr.pop(), Some(1));
-    /// assert!(arr.is_empty());
+    /// assert_eq!(arr.pop(), None);
     /// ```
     #[inline]
     fn pop(&mut self) -> Option<T> {
@@ -553,6 +583,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     }
 
     //============================================================
+
     #[inline]
     fn ensure_capacity(&mut self, total_len: usize) {
         if total_len > self.capacity() {
@@ -578,6 +609,15 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         self.capacity() - self.len()
     }
 
+    /// # Examples
+    ///
+    /// ```
+    /// use stack_array::*;
+    ///
+    /// let mut arr: ArrayBuf<u8, 32> = ArrayBuf::new();
+    /// arr.extend_from_slice(b"HelloWorld");
+    /// assert_eq!(arr.as_ref(), b"HelloWorld");
+    /// ```
     #[inline]
     fn extend_from_slice(&mut self, other: impl AsRef<[T]>)
     where

@@ -88,11 +88,6 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
     }
 
     #[inline]
-    fn append(&mut self, other: &mut Self) {
-        Vec::append(self, other)
-    }
-
-    #[inline]
     fn clear(&mut self) {
         Vec::clear(self)
     }
