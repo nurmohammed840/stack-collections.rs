@@ -1,19 +1,6 @@
-use crate::*;
+use crate::{drain::slice_range, *};
 
 pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
-    /// Constructs a new, empty `Vec<T>`.
-    ///
-    /// The array will not allocate until elements are pushed onto it.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use stack_array::*;
-    ///
-    /// let mut arr: Array<u8, 64> = Array::new();
-    /// ```
-    fn new() -> Self;
-
     /// Returns the number of elements the array can hold.
     ///
     /// # Examples
@@ -21,7 +8,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let arr: Array<u8, 4> = Array::new();
+    /// let arr: ArrayBuf<u8, 4> = ArrayBuf::new();
     /// assert_eq!(arr.capacity(), 4);
     /// ```
     fn capacity(&self) -> usize;
@@ -31,12 +18,6 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     ///
     /// If `len` is greater than the array's current length, this has no
     /// effect.
-    ///
-    /// The [`drain`] method can emulate `truncate`, but causes the excess
-    /// elements to be returned instead of dropped.
-    ///
-    /// Note that this method has no effect on the allocated capacity
-    /// of the array.
     fn truncate(&mut self, len: usize) {
         // This is safe because:
         //
@@ -64,7 +45,8 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// Equivalent to `&s[..]`.
     #[inline]
     fn as_slice(&self) -> &[T] {
-        self.as_ref()
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.len()) }
     }
 
     /// Extracts a mutable slice of the entire array.
@@ -72,7 +54,8 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// Equivalent to `&mut s[..]`.
     #[inline]
     fn as_mut_slice(&mut self) -> &mut [T] {
-        self.as_mut()
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len()) }
     }
 
     /// Returns a raw pointer to the array's buffer.
@@ -133,7 +116,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<&str, 4> = Array::from(["foo", "bar", "baz", "qux"]);
+    /// let mut arr = ArrayBuf::from(["foo", "bar", "baz", "qux"]);
     ///
     /// assert_eq!(arr.swap_remove(1), "bar");
     /// assert_eq!(arr[..], ["foo", "qux", "baz"]);
@@ -174,16 +157,49 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut list: Array<u8, 3> = Array::from([3]);
+    /// let mut list: ArrayBuf<u8, 3> = ArrayBuf::from([3].as_ref());
     /// list.insert(0, 1);
     /// assert_eq!(&list[..], [1, 3]);
     /// list.insert(1, 2);
-    /// assert_eq!(&list[..], [1, 2, 3]);
+    /// assert_eq!(&list, &[1, 2, 3]);
     /// ```
     ///
     /// # Panics
     /// Panics if the index is out of bounds.
-    fn insert(&mut self, index: usize, element: T);
+    fn insert(&mut self, index: usize, element: T) {
+        #[cold]
+        #[inline(never)]
+        fn assert_failed(index: usize, len: usize) -> ! {
+            panic!(
+                "insertion index (is {}) should be <= len (is {})",
+                index, len
+            );
+        }
+
+        let len = self.len();
+        if index > len {
+            assert_failed(index, len);
+        }
+
+        // space for the new element
+        let total_len = len + 1;
+        self.ensure_capacity(total_len);
+
+        unsafe {
+            // infallible
+            // The spot to put the new value
+            {
+                let p = self.as_mut_ptr().add(index);
+                // Shift everything over to make space. (Duplicating the
+                // `index`th element into two consecutive places.)
+                ptr::copy(p, p.offset(1), len - index);
+                // Write it in, overwriting the first copy of the `index`th
+                // element.
+                ptr::write(p, element);
+            }
+            self.set_len(total_len);
+        }
+    }
 
     /// Removes an element from position index within the array, shifting all elements after it to the left.
     ///
@@ -198,7 +214,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
+    /// let mut list = ArrayBuf::from([1, 2, 3]);
     /// assert_eq!(list.remove(0), 1);
     /// assert_eq!(list.remove(0), 2);
     /// assert_eq!(list.remove(0), 3);
@@ -247,7 +263,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<u8, 4> = Array::from([1, 2, 3, 4]);
+    /// let mut arr = ArrayBuf::from([1, 2, 3, 4]);
     ///
     /// arr.retain(|x| *x % 2 == 0);
     /// assert_eq!(arr[..], [2, 4]);
@@ -259,7 +275,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<u8, 5> = Array::from([1, 2, 3, 4, 5]);
+    /// let mut arr  = ArrayBuf::from([1, 2, 3, 4, 5]);
     /// let keep = [false, true, true, false, true];
     /// let mut iter = keep.iter();
     /// arr.retain(|_| *iter.next().unwrap());
@@ -269,12 +285,38 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     where
         F: FnMut(&T) -> bool,
     {
-        self.retain_mut(|elem| f(elem));
+        retain_mut(self, |elem| f(elem))
     }
 
-    fn retain_mut<F>(&mut self, f: F)
+    fn drain<R>(&mut self, range: R) -> Drain<'_, T, Self>
     where
-        F: FnMut(&mut T) -> bool;
+        R: RangeBounds<usize>,
+    {
+        let len = self.len();
+        let Range { start, end } = slice_range(range, ..len);
+
+        unsafe {
+            // set self.vec length's to start, to be safe in case Drain is leaked
+            self.set_len(start);
+            // Use the borrow in the IterMut to indicate borrowing behavior of the
+            // whole Drain iterator (like &mut T).
+            let range_slice = slice::from_raw_parts_mut(self.as_mut_ptr().add(start), end - start);
+            Drain {
+                tail_start: end,
+                tail_len: len - end,
+                iter: range_slice.iter(),
+                vec: ptr::NonNull::from(self),
+            }
+        }
+    }
+
+    #[inline]
+    fn dedup(&mut self)
+    where
+        T: PartialEq,
+    {
+        self.dedup_by(|a, b| a == b)
+    }
 
     /// Removes all but the first of consecutive elements in the array that resolve to the same
     /// key.
@@ -286,7 +328,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<u8, 5> = Array::from([10, 20, 21, 30, 20]);
+    /// let mut arr = ArrayBuf::from([10, 20, 21, 30, 20]);
     ///
     /// arr.dedup_by_key(|i| *i / 10);
     ///
@@ -299,11 +341,122 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         self.dedup_by(|a, b| key(a) == key(b))
     }
 
-    fn dedup_by<F>(&mut self, same_bucket: F)
+    fn dedup_by<F>(&mut self, mut same_bucket: F)
     where
-        F: FnMut(&mut T, &mut T) -> bool;
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        let len = self.len();
+        if len <= 1 {
+            return;
+        }
 
-    fn push(&mut self, value: T);
+        /* INVARIANT: vec.len() > read >= write > write-1 >= 0 */
+        struct FillGapOnDrop<'a, T, A: Array<T>> {
+            /* Offset of the element we want to check if it is duplicate */
+            read: usize,
+
+            /* Offset of the place where we want to place the non-duplicate
+             * when we find it. */
+            write: usize,
+
+            /* The Vec that would need correction if `same_bucket` panicked */
+            vec: &'a mut A,
+            _marker: core::marker::PhantomData<T>,
+        }
+
+        impl<'a, T, A: Array<T>> Drop for FillGapOnDrop<'a, T, A> {
+            fn drop(&mut self) {
+                /* This code gets executed when `same_bucket` panics */
+
+                /* SAFETY: invariant guarantees that `read - write`
+                 * and `len - read` never overflow and that the copy is always
+                 * in-bounds. */
+                unsafe {
+                    let ptr = self.vec.as_mut_ptr();
+                    let len = self.vec.len();
+
+                    /* How many items were left when `same_bucket` panicked.
+                     * Basically vec[read..].len() */
+                    let items_left = len.wrapping_sub(self.read);
+
+                    /* Pointer to first item in vec[write..write+items_left] slice */
+                    let dropped_ptr = ptr.add(self.write);
+                    /* Pointer to first item in vec[read..] slice */
+                    let valid_ptr = ptr.add(self.read);
+
+                    /* Copy `vec[read..]` to `vec[write..write+items_left]`.
+                     * The slices can overlap, so `copy_nonoverlapping` cannot be used */
+                    ptr::copy(valid_ptr, dropped_ptr, items_left);
+
+                    /* How many items have been already dropped
+                     * Basically vec[read..write].len() */
+                    let dropped = self.read.wrapping_sub(self.write);
+
+                    self.vec.set_len(len - dropped);
+                }
+            }
+        }
+
+        let mut gap = FillGapOnDrop {
+            read: 1,
+            write: 1,
+            vec: self,
+            _marker: core::marker::PhantomData,
+        };
+        let ptr = gap.vec.as_mut_ptr();
+
+        /* Drop items while going through Vec, it should be more efficient than
+         * doing slice partition_dedup + truncate */
+
+        /* SAFETY: Because of the invariant, read_ptr, prev_ptr and write_ptr
+         * are always in-bounds and read_ptr never aliases prev_ptr */
+        unsafe {
+            while gap.read < len {
+                let read_ptr = ptr.add(gap.read);
+                let prev_ptr = ptr.add(gap.write.wrapping_sub(1));
+
+                if same_bucket(&mut *read_ptr, &mut *prev_ptr) {
+                    // Increase `gap.read` now since the drop may panic.
+                    gap.read += 1;
+                    /* We have found duplicate, drop it in-place */
+                    ptr::drop_in_place(read_ptr);
+                } else {
+                    let write_ptr = ptr.add(gap.write);
+
+                    /* Because `read_ptr` can be equal to `write_ptr`, we either
+                     * have to use `copy` or conditional `copy_nonoverlapping`.
+                     * Looks like the first option is faster. */
+                    ptr::copy(read_ptr, write_ptr, 1);
+
+                    /* We have filled that place, so go further */
+                    gap.write += 1;
+                    gap.read += 1;
+                }
+            }
+
+            /* Technically we could let `gap` clean up with its Drop, but
+             * when `same_bucket` is guaranteed to not panic, this bloats a little
+             * the codegen, so we just do it manually */
+            gap.vec.set_len(gap.write);
+            mem::forget(gap);
+        }
+    }
+
+    
+    #[inline]
+    fn push(&mut self, value: T) {
+        // This will panic or abort if we would allocate > isize::MAX bytes
+        // or if the length increment would overflow for zero-sized types.
+        let len = self.len();
+        let total_len = len + 1;
+        self.ensure_capacity(total_len);
+
+        unsafe {
+            let end = self.as_mut_ptr().add(len);
+            ptr::write(end, value);
+            self.set_len(total_len);
+        }
+    }
 
     #[inline]
     fn append(&mut self, other: &mut Self) {
@@ -331,7 +484,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut list: Array<u8, 3> = Array::from([1, 2, 3]);
+    /// let mut list = ArrayBuf::from([1, 2, 3]);
     /// list.clear();
     /// assert!(list.is_empty());
     /// ```
@@ -347,7 +500,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let arr: Array<u8, 3> = Array::from([1, 2]);
+    /// let arr: ArrayBuf<u8, 3> = ArrayBuf::from([1, 2].as_ref());
     /// assert_eq!(arr.len(), 2);
     /// ```
     fn len(&self) -> usize;
@@ -359,7 +512,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<u8, 2> = Array::new();
+    /// let mut arr: ArrayBuf<u8, 2> = ArrayBuf::new();
     /// assert!(arr.is_empty());
     ///
     /// arr.push(1);
@@ -370,17 +523,6 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         self.len() == 0
     }
 
-    //============================================================
-
-    fn ensure_capacity(&mut self, total_cap: usize) {
-        if total_cap > self.capacity() {
-            panic!(
-                "Array is full, Max capacity: {}, But got: {total_cap}",
-                self.capacity()
-            );
-        }
-    }
-
     /// Removes the last element from a collection and returns it.
     ///
     /// # Examples
@@ -388,15 +530,34 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```rust
     /// use stack_array::*;
     ///
-    /// let mut arr: Array<u8, 3> = Array::from([1, 2]);
-    /// assert_eq!(arr.pop(), 2);
-    /// assert_eq!(arr.pop(), 1);
+    /// let mut arr: ArrayBuf<u8, 3> = ArrayBuf::from([1, 2].as_ref());
+    /// assert_eq!(arr.pop(), Some(2));
+    /// assert_eq!(arr.pop(), Some(1));
     /// assert!(arr.is_empty());
     /// ```
-    ///
-    /// # Panics
-    /// Panics if the array is empty.
-    fn pop(&mut self) -> T;
+    #[inline]
+    fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            unsafe {
+                let len = self.len() - 1;
+                self.set_len(len);
+                Some(ptr::read(self.as_ptr().add(len)))
+            }
+        }
+    }
+
+    //============================================================
+
+    fn ensure_capacity(&mut self, total_len: usize) {
+        if total_len > self.capacity() {
+            panic!(
+                "Array is full, Max capacity: {}, But got: {total_len}",
+                self.capacity()
+            );
+        }
+    }
 
     /// Returns the number of elements can be inserted into the array.
     ///
@@ -405,7 +566,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// ```
     /// use stack_array::*;
     ///
-    /// let arr: Array<u8, 3> = Array::from([1, 2]);
+    /// let arr: ArrayBuf<u8, 3> = ArrayBuf::from([1, 2].as_ref());
     /// assert_eq!(arr.remaining_capacity(), 1);
     /// ```
     #[inline]
@@ -413,36 +574,28 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         self.capacity() - self.len()
     }
 
-    /// Moves all the elements of `other` into `Self`
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of elements in the array overflows.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use stack_array::*;
-    ///
-    /// let mut arr: Array<u8, 6> = Array::from([1, 2, 3]);
-    /// arr.append_slice([4, 5, 6]);
-    /// assert_eq!(arr[..], [1, 2, 3, 4, 5, 6]);
-    /// ```
     #[inline]
-    fn append_slice(&mut self, other: impl AsRef<[T]>)
+    fn extend_from_slice(&mut self, other: impl AsRef<[T]>)
     where
         T: Copy,
     {
         let other = other.as_ref();
         let count = other.len();
         let len = self.len();
-
         let total_len = len + count;
         self.ensure_capacity(total_len);
-
         unsafe {
             ptr::copy_nonoverlapping(other.as_ptr(), self.as_mut_ptr().add(len), count);
             self.set_len(total_len);
         }
     }
 }
+
+// #[test]
+// fn test_name() {
+//     let mut list: ArrayBuf<u8, 3> = ArrayBuf::from([3].as_ref());
+//     list.insert(0, 1);
+//     assert_eq!(&list[..], [1, 3]);
+//     list.insert(1, 2);
+//     assert_eq!(&list, &[1, 2, 3]);
+// }

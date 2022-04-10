@@ -1,7 +1,8 @@
 [package]
 name = "stack-array"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
+
 license = "Apache-2.0"
 description = "A data structure for storing and manipulating fixed number of elements of a specific type."
 authors = ["Nur <nurmohammed840@gmail.com>"]
