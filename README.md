@@ -1,4 +1,4 @@
-Some useful data-structures, such as: Array, HashMap, HashSet, BTreeMap, BTreeSet, etc... But lives on the stack.
+Some useful data-structures, such as: ArrayBuf, StringBuf, etc...
 
 Good choice for fixed size storage.
 
