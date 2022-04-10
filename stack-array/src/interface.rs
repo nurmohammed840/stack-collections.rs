@@ -18,6 +18,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     ///
     /// If `len` is greater than the array's current length, this has no
     /// effect.
+    #[inline]
     fn truncate(&mut self, len: usize) {
         // This is safe because:
         //
@@ -166,6 +167,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     ///
     /// # Panics
     /// Panics if the index is out of bounds.
+    #[inline]
     fn insert(&mut self, index: usize, element: T) {
         #[cold]
         #[inline(never)]
@@ -222,6 +224,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     ///
     /// # Panics
     /// Panics if the index is out of bounds.
+    #[inline]
     fn remove(&mut self, index: usize) -> T {
         #[cold]
         #[inline(never)]
@@ -281,6 +284,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// arr.retain(|_| *iter.next().unwrap());
     /// assert_eq!(arr[..], [2, 3, 5]);
     /// ```
+    #[inline]
     fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(&T) -> bool,
@@ -333,6 +337,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     /// arr.dedup_by_key(|i| *i / 10);
     ///
     /// assert_eq!(arr[..], [10, 20, 30, 20]);
+    #[inline]
     fn dedup_by_key<F, K>(&mut self, mut key: F)
     where
         F: FnMut(&mut T) -> K,
@@ -548,7 +553,7 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     }
 
     //============================================================
-
+    #[inline]
     fn ensure_capacity(&mut self, total_len: usize) {
         if total_len > self.capacity() {
             panic!(

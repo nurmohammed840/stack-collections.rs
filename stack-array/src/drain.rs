@@ -124,7 +124,7 @@ impl<T, A: Array<T>> Drop for Drain<'_, T, A> {
             }
         }
 
-        let iter = mem::replace(&mut self.iter, (&mut []).iter());
+        let iter = mem::replace(&mut self.iter, (& []).iter());
         let drop_len = iter.len();
 
         let mut vec = self.vec;
