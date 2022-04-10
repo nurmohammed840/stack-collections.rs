@@ -9,7 +9,7 @@ You may use this library to store a fixed number of elements of a specific type 
 ```rust
 use stack_array::*;
 
-let mut arr: ArrayBuf<String; 4> = ArrayBuf::new();
+let mut arr: ArrayBuf<String, 4> = ArrayBuf::new();
 
 arr.push("Hello".into());
 arr.push("World".into());

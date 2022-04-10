@@ -3,6 +3,10 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
         Vec::capacity(self)
     }
 
+    fn truncate(&mut self, len: usize) {
+        Vec::truncate(self, len)
+    }
+
     fn as_ptr(&self) -> *const T {
         Vec::as_ptr(self)
     }
@@ -13,33 +17,6 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
 
     unsafe fn set_len(&mut self, len: usize) {
         Vec::set_len(self, len)
-    }
-
-    fn insert(&mut self, index: usize, element: T) {
-        Vec::insert(self, index, element)
-    }
-
-    fn dedup_by<F>(&mut self, same_bucket: F)
-    where
-        F: FnMut(&mut T, &mut T) -> bool,
-    {
-        Vec::dedup_by(self, same_bucket)
-    }
-
-    fn push(&mut self, value: T) {
-        Vec::push(self, value)
-    }
-
-    fn len(&self) -> usize {
-        Vec::len(self)
-    }
-
-    fn pop(&mut self) -> Option<T> {
-        Vec::pop(self)
-    }
-
-    fn truncate(&mut self, len: usize) {
-        Vec::truncate(self, len)
     }
 
     fn as_slice(&self) -> &[T] {
@@ -54,6 +31,10 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
         Vec::swap_remove(self, index)
     }
 
+    fn insert(&mut self, index: usize, element: T) {
+        Vec::insert(self, index, element)
+    }
+
     fn remove(&mut self, index: usize) -> T {
         Vec::remove(self, index)
     }
@@ -65,12 +46,30 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
         Vec::retain(self, f)
     }
 
+    fn dedup(&mut self)
+    where
+        T: PartialEq,
+    {
+        Vec::dedup(self)
+    }
+
     fn dedup_by_key<F, K>(&mut self, key: F)
     where
         F: FnMut(&mut T) -> K,
         K: PartialEq,
     {
         Vec::dedup_by_key(self, key)
+    }
+
+    fn dedup_by<F>(&mut self, same_bucket: F)
+    where
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        Vec::dedup_by(self, same_bucket)
+    }
+
+    fn push(&mut self, value: T) {
+        Vec::push(self, value)
     }
 
     fn append(&mut self, other: &mut Self) {
@@ -81,8 +80,16 @@ impl<T> crate::Array<T> for std::vec::Vec<T> {
         Vec::clear(self)
     }
 
+    fn len(&self) -> usize {
+        Vec::len(self)
+    }
+
     fn is_empty(&self) -> bool {
         Vec::is_empty(self)
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        Vec::pop(self)
     }
 
     // =========================================================================

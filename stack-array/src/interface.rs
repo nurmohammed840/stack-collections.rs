@@ -40,24 +40,6 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         }
     }
 
-    /// Extracts a slice containing the entire array.
-    ///
-    /// Equivalent to `&s[..]`.
-    #[inline]
-    fn as_slice(&self) -> &[T] {
-        // SAFETY: slice will contain only initialized objects.
-        unsafe { slice::from_raw_parts(self.as_ptr(), self.len()) }
-    }
-
-    /// Extracts a mutable slice of the entire array.
-    ///
-    /// Equivalent to `&mut s[..]`.
-    #[inline]
-    fn as_mut_slice(&mut self) -> &mut [T] {
-        // SAFETY: slice will contain only initialized objects.
-        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len()) }
-    }
-
     /// Returns a raw pointer to the array's buffer.
     ///
     /// The caller must ensure that the array outlives the pointer this
@@ -97,6 +79,24 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
     ///
     /// [`capacity()`]: Vec::capacity
     unsafe fn set_len(&mut self, len: usize);
+
+    /// Extracts a slice containing the entire array.
+    ///
+    /// Equivalent to `&s[..]`.
+    #[inline]
+    fn as_slice(&self) -> &[T] {
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.len()) }
+    }
+
+    /// Extracts a mutable slice of the entire array.
+    ///
+    /// Equivalent to `&mut s[..]`.
+    #[inline]
+    fn as_mut_slice(&mut self) -> &mut [T] {
+        // SAFETY: slice will contain only initialized objects.
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len()) }
+    }
 
     /// Removes an element from the array and returns it.
     ///
@@ -442,7 +442,6 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         }
     }
 
-    
     #[inline]
     fn push(&mut self, value: T) {
         // This will panic or abort if we would allocate > isize::MAX bytes
@@ -590,12 +589,3 @@ pub trait Array<T>: AsRef<[T]> + AsMut<[T]> + Default {
         }
     }
 }
-
-// #[test]
-// fn test_name() {
-//     let mut list: ArrayBuf<u8, 3> = ArrayBuf::from([3].as_ref());
-//     list.insert(0, 1);
-//     assert_eq!(&list[..], [1, 3]);
-//     list.insert(1, 2);
-//     assert_eq!(&list, &[1, 2, 3]);
-// }
